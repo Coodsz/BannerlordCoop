@@ -425,20 +425,28 @@ public class PlayerManager : IPlayerManager
 
     public bool IsSenderControllingHero(object sender, string heroId)
     {
-        if (sender is NetPeer peer && TryGetPlayer(peer, out var player) && player.HeroId == heroId) return true;
+        var peer = sender as NetPeer;
+        if (!string.IsNullOrEmpty(heroId) && TryGetCurrentPlayer(peer, out var player) && player.HeroId == heroId) return true;
 
-        logger.Warning("Ignoring a request for hero {HeroId} from a peer that does not control it", heroId);
+        logger.Warning("Ignoring a request for hero {HeroId} from peer {PeerId}, which does not control it", heroId, peer?.Id);
         return false;
     }
 
     public bool IsSenderControllingParty(object sender, string mobilePartyId)
     {
         var peer = sender as NetPeer;
-        if (peer != null && !string.IsNullOrEmpty(mobilePartyId) && TryGetCurrentController(peer, out var controllerId) &&
-            TryGetPlayer(controllerId, out var player) && player.MobilePartyId == mobilePartyId) return true;
+        if (!string.IsNullOrEmpty(mobilePartyId) && TryGetCurrentPlayer(peer, out var player) &&
+            player.MobilePartyId == mobilePartyId) return true;
 
         logger.Warning("Ignoring a request for party {PartyId} from peer {PeerId}, which does not control it", mobilePartyId, peer?.Id);
         return false;
+    }
+
+    // Resolves through the controller's current peer, so a peer a reconnect replaced controls nothing.
+    private bool TryGetCurrentPlayer(NetPeer peer, out Player player)
+    {
+        player = null;
+        return peer != null && TryGetCurrentController(peer, out var controllerId) && TryGetPlayer(controllerId, out player);
     }
 
     public bool TryGetSenderHero(object sender, out Hero hero)
