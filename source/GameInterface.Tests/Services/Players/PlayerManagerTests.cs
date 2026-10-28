@@ -299,6 +299,57 @@ public class PlayerManagerTests
     }
 
     [Fact]
+    public void IsSenderControllingHero_StalePeerAfterReconnect_ReturnsFalse()
+    {
+        var playerManager = CreatePlayerManager(out _);
+        var network = new TestNetwork();
+        // Test peers share one endpoint, and peers compare by endpoint, so the old peer gets its own address.
+        var stalePeer = network.CreatePeer("10.0.0.9");
+        var currentPeer = network.CreatePeer();
+
+        Assert.True(playerManager.AddPlayer(new Player(ControllerId, HeroId, string.Empty, string.Empty, string.Empty)));
+        playerManager.SetPeer(ControllerId, stalePeer);
+        playerManager.SetPeer(ControllerId, currentPeer);
+
+        Assert.False(playerManager.IsSenderControllingHero(stalePeer, HeroId));
+        Assert.True(playerManager.IsSenderControllingHero(currentPeer, HeroId));
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public void IsSenderControllingHero_NullOrEmptyHeroId_ReturnsFalse(string heroId)
+    {
+        var playerManager = CreatePlayerManager(out _);
+        var peer = new TestNetwork().CreatePeer();
+
+        // A player with no hero yet must not match a request that names no hero.
+        Assert.True(playerManager.AddPlayer(new Player(ControllerId, heroId, string.Empty, string.Empty, string.Empty)));
+        playerManager.SetPeer(ControllerId, peer);
+
+        Assert.False(playerManager.IsSenderControllingHero(peer, heroId));
+    }
+
+    [Fact]
+    public void IsSenderControllingHero_CurrentPeer_AcceptsOwnHeroAndWarnsWithThePeerForAnother()
+    {
+        var logger = new Mock<ILogger>();
+        var playerManager = new PlayerManager(logger.Object, new Mock<IObjectManager>().Object, new ControllerIdProvider());
+        var peer = new TestNetwork().CreatePeer();
+
+        Assert.True(playerManager.AddPlayer(new Player(ControllerId, HeroId, string.Empty, string.Empty, string.Empty)));
+        playerManager.SetPeer(ControllerId, peer);
+
+        Assert.True(playerManager.IsSenderControllingHero(peer, HeroId));
+        Assert.False(playerManager.IsSenderControllingHero(peer, "HeroTwo"));
+
+        var warning = Assert.Single(logger.Invocations, invocation => invocation.Method.Name == nameof(ILogger.Warning));
+        Assert.Equal("Ignoring a request for hero {HeroId} from peer {PeerId}, which does not control it", warning.Arguments[0]);
+        Assert.Equal("HeroTwo", warning.Arguments[1]);
+        Assert.Equal(peer.Id, warning.Arguments[2]);
+    }
+
+    [Fact]
     public void IsSenderControllingParty_EmptyPartyIdOnBothSides_ReturnsFalse()
     {
         var playerManager = new PlayerManager(new Mock<ILogger>().Object, new Mock<IObjectManager>().Object, new ControllerIdProvider());
