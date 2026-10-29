@@ -1,7 +1,10 @@
-﻿using Common.Util;
+﻿using Common.Messaging;
+using Common.Network.Messages;
+using Common.Util;
 using E2E.Tests.Environment.Instance;
 using E2E.Tests.Util;
 using GameInterface.Services.MapEvents;
+using GameInterface.Services.Players;
 using SandBox.GauntletUI.Map;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.MapEvents;
@@ -51,8 +54,40 @@ public class HideoutAssaultHostElectionTests : MissionTestEnvironment
         AssertIsLocalHost(clients[1], mapEventId, false);
     }
 
+    [Fact]
+    public void AssaultLeaderNotConnected_FirstReadyPlayerHosts()
+    {
+        var mapEventId = SetupHideoutAssault(leaderConnected: false);
+        var clients = Clients.ToArray();
+
+        EnterBattle(clients[1], mapEventId);
+
+        foreach (var instance in Clients.Append(Server))
+            AssertHostController(instance, mapEventId, AllyControllerId);
+    }
+
+    [Fact]
+    public void AssaultLeaderDisconnectsWhileLoading_WaitingAllyHosts()
+    {
+        var mapEventId = SetupHideoutAssault();
+        var clients = Clients.ToArray();
+
+        EnterBattle(clients[0], mapEventId, missionReady: false);
+        EnterBattle(clients[1], mapEventId);
+        AssertNoHost(Server, mapEventId);
+
+        Server.Call(() =>
+        {
+            Server.Resolve<IMessageBroker>().Publish(this, new PlayerDisconnected(clients[0].NetPeer, default));
+        });
+        Server.PumpGameThread();
+
+        foreach (var instance in Clients.Append(Server))
+            AssertHostController(instance, mapEventId, AllyControllerId);
+    }
+
     // The leader's party starts the hideout battle, the ally joins the attacker side and the bandits defend
-    private string SetupHideoutAssault()
+    private string SetupHideoutAssault(bool leaderConnected = true)
     {
         var clients = Clients.ToArray();
         SetControllerId(clients[0], LeaderControllerId);
@@ -92,6 +127,13 @@ public class HideoutAssaultHostElectionTests : MissionTestEnvironment
 
         RegisterAsPlayerParty(LeaderControllerId, CreateRegisteredObject<Hero>(), leaderPartyId!);
         RegisterAsPlayerParty(AllyControllerId, CreateRegisteredObject<Hero>(), allyPartyId!);
+        Server.Call(() =>
+        {
+            var players = Server.Resolve<IPlayerManager>();
+            if (leaderConnected)
+                players.SetPeer(LeaderControllerId, clients[0].NetPeer);
+            players.SetPeer(AllyControllerId, clients[1].NetPeer);
+        });
 
         Server.Call(() =>
         {
