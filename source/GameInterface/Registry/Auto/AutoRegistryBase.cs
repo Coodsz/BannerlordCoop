@@ -145,7 +145,12 @@ public abstract class AutoRegistryBase<T> : IAutoRegistry<T> where T : class
             // Collect mode: record the divergence so a joining client can register under the server's current id,
             // instead of registering.
             if (objectManager.TryGetId(obj, out var serverId) && serverId != id)
+            {
+                // Two objects deriving one id (a duplicate StringId) leave the one registered under it unresolvable on a joining client
+                if (objectManager.TryGetObject(id, out T other) && !ReferenceEquals(other, obj))
+                    Logger.Debug("Join id remap: {DerivedId} also derives for {ServerId}, so the object under {DerivedId} will not resolve on a joining client", id, serverId);
                 idRemapCollector[id] = serverId;
+            }
             return;
         }
 
