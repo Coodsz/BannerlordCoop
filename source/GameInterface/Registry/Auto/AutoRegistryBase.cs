@@ -94,6 +94,8 @@ public abstract class AutoRegistryBase<T> : IAutoRegistry<T> where T : class
 
     private IDictionary<string, string> idRemapCollector;
     private IDictionary<string, string> idRemapOverride;
+    // Server and joining client walk the same saved object order, so a duplicate derived id is told apart by its occurrence
+    private readonly Dictionary<string, int> idRemapOccurrences = new Dictionary<string, int>();
 
     protected bool IsCollectingIdRemap => idRemapCollector != null;
 
@@ -107,6 +109,7 @@ public abstract class AutoRegistryBase<T> : IAutoRegistry<T> where T : class
     public void CollectIdRemap(IDictionary<string, string> map)
     {
         idRemapCollector = map;
+        idRemapOccurrences.Clear();
         try { RegisterAllObjects(); }
         finally { idRemapCollector = null; }
     }
@@ -121,6 +124,7 @@ public abstract class AutoRegistryBase<T> : IAutoRegistry<T> where T : class
     public void RegisterAllObjectsWithRemap(IDictionary<string, string> map)
     {
         idRemapOverride = map;
+        idRemapOccurrences.Clear();
         try { RegisterAllObjects(); }
         finally { idRemapOverride = null; }
     }
@@ -144,19 +148,15 @@ public abstract class AutoRegistryBase<T> : IAutoRegistry<T> where T : class
         {
             // Collect mode: record the divergence so a joining client can register under the server's current id,
             // instead of registering.
+            var remapKey = NextIdRemapKey(id);
             if (objectManager.TryGetId(obj, out var serverId) && serverId != id)
-            {
-                // Two objects deriving one id (a duplicate StringId) leave the one registered under it unresolvable on a joining client
-                if (objectManager.TryGetObject(id, out T other) && !ReferenceEquals(other, obj))
-                    Logger.Debug("Join id remap: {DerivedId} also derives for {ServerId}, so the object under {DerivedId} will not resolve on a joining client", id, serverId);
-                idRemapCollector[id] = serverId;
-            }
+                idRemapCollector[remapKey] = serverId;
             return;
         }
 
         // Joining client: adopt the server's id for a live-created attachment instead of this owner-derived id,
         // so the object is registered once under the id the server actually uses (no register-wrong-then-rekey).
-        if (idRemapOverride != null && idRemapOverride.TryGetValue(id, out var overrideId))
+        if (idRemapOverride != null && idRemapOverride.TryGetValue(NextIdRemapKey(id), out var overrideId))
             id = overrideId;
 
         if (objectManager.TryGetId(obj, out _))
@@ -165,6 +165,13 @@ public abstract class AutoRegistryBase<T> : IAutoRegistry<T> where T : class
         EnsureObjectManagerCounter(id, obj);
 
         objectManager.AddExisting(id, obj);
+    }
+
+    private string NextIdRemapKey(string id)
+    {
+        idRemapOccurrences.TryGetValue(id, out var occurrence);
+        idRemapOccurrences[id] = occurrence + 1;
+        return occurrence == 0 ? id : $"{id}#{occurrence}";
     }
 
     private void EnsureObjectManagerCounter(string id, T obj)
