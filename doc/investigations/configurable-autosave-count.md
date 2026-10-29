@@ -1,6 +1,6 @@
 # Configurable number of autosaves (#4067): where the limit lives and the planned change
 
-Start sha `e2fdce02`. This change is blocked, so this note holds the ready design (see "Why it isn't applied").
+Start sha `e2fdce02`. Implemented on this branch as planned below; see "Overlap with #4005".
 
 ## Where the limit of 3 lives
 
@@ -37,12 +37,10 @@ deleting a non-autosave or the current save.
    - `IsSaveFileNameReserved` follows the count.
    - The new `ModOptions` member round-trips through the config serialization test.
 
-## Why it isn't applied
+## Overlap with #4005
 
-garrettluskey's open #4005 ("hold kingdom decision votes while a voter is in a mission") edits every config file this
-option needs, at the same spots: `ModConfigData.cs`, `ModConfigProvider.cs` (it adds `[ProtoMember(28)]`
-`KingdomDecisionMissionHoldLimitMinutes`), `deploy/mod-config.default.json`,
-`GameInterface.Tests/Configuration/ModConfigTests.cs` and
-`Coop.IntegrationTests/Serialization/ModConfigNetworkMessageSerializationTest.cs`. Under the standing rule against
-editing files in a maintainer's open PR, the option waits until #4005 merges, or until someone agrees to the overlap.
-The patch file in step 3 and its tests touch no maintainer file.
+garrettluskey's open #4005 edits the same config files at the same spots: `ModConfigData.cs`, `ModConfigProvider.cs`
+(it adds `[ProtoMember(28)]` `KingdomDecisionMissionHoldLimitMinutes`), `deploy/mod-config.default.json` and
+`Coop.IntegrationTests/Serialization/ModConfigNetworkMessageSerializationTest.cs`. This branch uses `ProtoMember(29)`,
+so the wire tags don't clash once both merge. The text will conflict in those files, and resolving it means keeping
+both options. The patch file and its tests touch no maintainer file.

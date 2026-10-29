@@ -225,6 +225,11 @@
 
     // Set the time in seconds players have to vote on kingdom decisions.
     // Default is 60. Values of 0 or lower will default back to 60.
-    "kingdomDecisionVoteTimeoutSeconds": 60
+    "kingdomDecisionVoteTimeoutSeconds": 60,
+
+    // Set how many autosave slots the server rotates through (saveauto1, saveauto2, ...).
+    // Default is 3, the vanilla number. Values are clamped between 1 and 20.
+    // Lowering it never deletes an autosave, the higher slots just stop being overwritten.
+    "autosaveCount": 3
   }
 }
