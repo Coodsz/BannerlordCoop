@@ -95,7 +95,7 @@ internal class BattleHostHandler : IHandler
         public BattleState ResolvedState;
         // Mission-ready players of a hideout battle waiting for its assault leader to be elected host, in arrival order
         public readonly List<HostEndpoint> HideoutHostCandidates = new List<HostEndpoint>();
-        public DateTime HideoutLeaderWaitUntilUtc;
+        public DateTime HideoutLeaderWaitStartedUtc;
     }
 
     private sealed class PartyHealthReports
@@ -131,8 +131,9 @@ internal class BattleHostHandler : IHandler
     /// Internal-settable so tests can drive the deadline without wall-clock waits.
     /// </summary>
     internal TimeSpan FlushAckDeadline { get; set; } = TimeSpan.FromSeconds(2.5);
-    // How long ready players of a hideout battle wait for a connected assault leader that never gets ready
-    internal TimeSpan HideoutLeaderWaitDeadline { get; set; } = TimeSpan.FromSeconds(30);
+    // How long ready players of a hideout battle wait for a connected assault leader that never gets ready, long enough
+    // for a slow scene load so the ally does not take the duel again
+    internal TimeSpan HideoutLeaderWaitDeadline { get; set; } = TimeSpan.FromSeconds(90);
 
     // [Server] Return grants are deferred behind the shrunk host's flush acks (BR-033 handshake).
     // The ledger only holds the host's last THROTTLED progress report, so the returner must not be served
@@ -394,7 +395,7 @@ internal class BattleHostHandler : IHandler
                 var runtimeState = GetOrCreateRuntimeState(mapEventId);
                 var candidates = runtimeState.HideoutHostCandidates;
                 if (candidates.Count == 0)
-                    runtimeState.HideoutLeaderWaitUntilUtc = DateTime.UtcNow + HideoutLeaderWaitDeadline;
+                    runtimeState.HideoutLeaderWaitStartedUtc = DateTime.UtcNow;
                 if (!candidates.Any(candidate => candidate.ControllerId == requesterId))
                     candidates.Add(new HostEndpoint { ControllerId = requesterId, Peer = requester });
                 Logger.Information("[BattleHost] {Requester} is ready for hideout battle {MapEventId}; waiting for its assault leader to host",
@@ -926,7 +927,7 @@ internal class BattleHostHandler : IHandler
         var now = DateTime.UtcNow;
         foreach (var battle in battleRuntimeStates.ToArray())
         {
-            if (battle.Value.HideoutHostCandidates.Count == 0 || now < battle.Value.HideoutLeaderWaitUntilUtc ||
+            if (battle.Value.HideoutHostCandidates.Count == 0 || now < battle.Value.HideoutLeaderWaitStartedUtc + HideoutLeaderWaitDeadline ||
                 hostRegistry.TryGet(battle.Key, out _) || !objectManager.TryGetObject<MapEvent>(battle.Key, out var waitingEvent))
                 continue;
 

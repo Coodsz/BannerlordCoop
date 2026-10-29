@@ -113,12 +113,17 @@ public class HideoutAssaultHostElectionTests : MissionTestEnvironment
     {
         var mapEventId = SetupHideoutAssault();
         var clients = Clients.ToArray();
-        Server.Call(() => Server.Resolve<BattleHostHandler>().HideoutLeaderWaitDeadline = TimeSpan.Zero);
 
         EnterBattle(clients[0], mapEventId, missionReady: false);
         EnterBattle(clients[1], mapEventId);
         AssertNoHost(Server, mapEventId);
 
+        // A slow leader load is still inside the default wait
+        Server.Call(() => Server.Resolve<IMessageBroker>().Publish(this, new CampaignTick()));
+        AssertNoHost(Server, mapEventId);
+        Server.Call(() => Assert.Equal(TimeSpan.FromSeconds(90), Server.Resolve<BattleHostHandler>().HideoutLeaderWaitDeadline));
+
+        Server.Call(() => Server.Resolve<BattleHostHandler>().HideoutLeaderWaitDeadline = TimeSpan.Zero);
         Server.Call(() => Server.Resolve<IMessageBroker>().Publish(this, new CampaignTick()));
 
         foreach (var instance in Clients.Append(Server))
