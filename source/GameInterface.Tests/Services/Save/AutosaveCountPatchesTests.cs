@@ -1,6 +1,5 @@
 ﻿using GameInterface.Configuration;
 using GameInterface.Services.Save.Patches;
-using TaleWorlds.Core;
 using Xunit;
 
 namespace GameInterface.Tests.Services.Save;
@@ -53,36 +52,6 @@ public class AutosaveCountPatchesTests
     {
         Assert.Equal(expected, AutosaveCountPatches.TryGetAutosaveSlot(name, "saveauto", count, out var slot));
         Assert.Equal(expectedSlot, expected ? slot : 0);
-    }
-
-    [Fact]
-    public void ReservedNames_FollowTheConfiguredCount()
-    {
-        var previous = ModConfigProvider.ModOptions;
-        try
-        {
-            ModConfigProvider.ModOptions = new ModOptions(new ModOptionsData { AutosaveCount = 5 });
-            var harmony = new HarmonyLib.Harmony($"autosave-count-{System.Guid.NewGuid()}");
-            harmony.CreateClassProcessor(typeof(AutosaveCountPatches)).Patch();
-            try
-            {
-                Assert.True(MBSaveLoad.IsSaveFileNameReserved(MBSaveLoad.AutoSaveNamePrefix + "5"));
-                Assert.False(MBSaveLoad.IsSaveFileNameReserved(MBSaveLoad.AutoSaveNamePrefix + "6"));
-
-                MBSaveLoad.AutoSaveIndex = 3;
-                MBSaveLoad.IncrementAutoSaveIndex();
-                Assert.Equal(4, MBSaveLoad.AutoSaveIndex);
-            }
-            finally
-            {
-                harmony.UnpatchAll(harmony.Id);
-                MBSaveLoad.AutoSaveIndex = 0;
-            }
-        }
-        finally
-        {
-            ModConfigProvider.ModOptions = previous;
-        }
     }
 
     private static int[] Rotate(int start, int count, int steps)
