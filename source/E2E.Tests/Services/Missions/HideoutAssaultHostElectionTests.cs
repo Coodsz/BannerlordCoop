@@ -4,7 +4,10 @@ using Common.Util;
 using E2E.Tests.Environment.Instance;
 using E2E.Tests.Util;
 using GameInterface.Services.MapEvents;
+using GameInterface.Services.PlayerCaptivityService.Messages;
 using GameInterface.Services.Players;
+using Missions.Battles;
+using Missions.Messages;
 using SandBox.GauntletUI.Map;
 using TaleWorlds.CampaignSystem;
 using TaleWorlds.CampaignSystem.MapEvents;
@@ -85,6 +88,53 @@ public class HideoutAssaultHostElectionTests : MissionTestEnvironment
         foreach (var instance in Clients.Append(Server))
             AssertHostController(instance, mapEventId, AllyControllerId);
     }
+
+    [Fact]
+    public void WaitingAlly_IsSentTheSingleAssignmentNamingTheLeader()
+    {
+        var mapEventId = SetupHideoutAssault();
+        var clients = Clients.ToArray();
+
+        EnterBattle(clients[1], mapEventId);
+        Assert.Empty(HostAssignments(mapEventId));
+        AssertNoHost(clients[1], mapEventId);
+
+        EnterBattle(clients[0], mapEventId);
+
+        var assignment = Assert.Single(HostAssignments(mapEventId));
+        Assert.Equal(LeaderControllerId, assignment.HostControllerId);
+        Assert.Equal(1, assignment.Epoch);
+        AssertHostController(clients[1], mapEventId, LeaderControllerId);
+        AssertIsLocalHost(clients[1], mapEventId, false);
+    }
+
+    [Fact]
+    public void AssaultLeaderNeverGetsReady_WaitingAllyHostsAfterTheDeadline()
+    {
+        var mapEventId = SetupHideoutAssault();
+        var clients = Clients.ToArray();
+        Server.Call(() => Server.Resolve<BattleHostHandler>().HideoutLeaderWaitDeadline = TimeSpan.Zero);
+
+        EnterBattle(clients[0], mapEventId, missionReady: false);
+        EnterBattle(clients[1], mapEventId);
+        AssertNoHost(Server, mapEventId);
+
+        Server.Call(() => Server.Resolve<IMessageBroker>().Publish(this, new CampaignTick()));
+
+        foreach (var instance in Clients.Append(Server))
+            AssertHostController(instance, mapEventId, AllyControllerId);
+
+        // The leader getting ready later joins the hosted battle instead of taking it over
+        MakeMissionReady(clients[0], mapEventId);
+        foreach (var instance in Clients.Append(Server))
+            AssertHostController(instance, mapEventId, AllyControllerId);
+        Assert.All(HostAssignments(mapEventId), message => Assert.Equal(AllyControllerId, message.HostControllerId));
+    }
+
+    private NetworkBattleHostAssigned[] HostAssignments(string mapEventId) =>
+        Server.NetworkSentMessages.GetMessages<NetworkBattleHostAssigned>()
+            .Where(message => message.MapEventId == mapEventId)
+            .ToArray();
 
     // The leader's party starts the hideout battle, the ally joins the attacker side and the bandits defend
     private string SetupHideoutAssault(bool leaderConnected = true)
