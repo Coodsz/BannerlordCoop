@@ -76,6 +76,9 @@ public readonly struct ModOptions
     public readonly int SpawnRateWanderers { get; } = 1;
     [ProtoMember(27)]
     public readonly int KingdomDecisionVoteTimeoutSeconds { get; } = 60;
+    // 28 is taken by the kingdom decision mission hold limit in open PR #4005
+    [ProtoMember(29)]
+    public readonly int AutosaveCount { get; } = 3;
 
     public ModOptions(ModOptions previous, bool voiceEnabled)
     {
@@ -112,5 +115,6 @@ public readonly struct ModOptions
         ShowPlayerNameplates = modOptionsData.ShowPlayerNameplates ?? ShowPlayerNameplates;
         PlayerWoundedBattleEntry = modOptionsData.PlayerWoundedBattleEntry ?? PlayerWoundedBattleEntry;
         KingdomDecisionVoteTimeoutSeconds = modOptionsData.KingdomDecisionVoteTimeoutSeconds ?? KingdomDecisionVoteTimeoutSeconds;
+        AutosaveCount = modOptionsData.AutosaveCount ?? AutosaveCount;
     }
 }

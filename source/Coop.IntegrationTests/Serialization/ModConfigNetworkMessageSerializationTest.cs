@@ -70,6 +70,7 @@ namespace Coop.IntegrationTests.Serialization
                 GoldFoodInfluenceChangeForDisconnectedPlayers = true,
                 PlayerBattleAiJoinWindowHours = 6,
                 KingdomDecisionVoteTimeoutSeconds = 600,
+                AutosaveCount = 7,
                 EnsureUnaffiliatedWanderers = false,
                 WandererLimit = 64,
                 SpawnRateWanderers = 2,
@@ -94,6 +95,7 @@ namespace Coop.IntegrationTests.Serialization
             Assert.True(copy.GoldFoodInfluenceChangeForDisconnectedPlayers);
             Assert.Equal(6, copy.PlayerBattleAiJoinWindowHours);
             Assert.Equal(600, copy.KingdomDecisionVoteTimeoutSeconds);
+            Assert.Equal(7, copy.AutosaveCount);
             Assert.False(copy.EnsureUnaffiliatedWanderers);
             Assert.Equal(64, copy.WandererLimit);
             Assert.Equal(2, copy.SpawnRateWanderers);
