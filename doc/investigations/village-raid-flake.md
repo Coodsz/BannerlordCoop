@@ -24,8 +24,8 @@ one missing pump inside one test.
 ## Local reproduction (docker image `garrettluskey/bannerlordcoop`, Release build of `e2fdce02`)
 
 - The two failing tests on their own (8 cases), 15 runs in a row: 15 passed, 0 failed.
-- The full shard 2 class filter, computed with `.github/scripts/run-e2e-shard.sh` (416 tests): run 1 passed all 416.
-  Further runs are noted below as they finish.
+- The full shard 2 class filter, computed with `.github/scripts/run-e2e-shard.sh` (416 tests), 4 runs in a row: all
+  4 passed with all 416 tests green.
 
 It has not been reproduced locally yet, so no root cause with file:line is claimed.
 
