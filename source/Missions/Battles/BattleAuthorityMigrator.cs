@@ -753,7 +753,8 @@ public class BattleAuthorityMigrator : IBattleAuthorityMigrator
                 // has an active behavior (there is none here), so they'd stand idle. Give each adopted formation
                 // an explicit Charge so the NPCs actually engage. (Freshly spawned troops move because their
                 // OWNER's team AI drives them; these adopted puppets have no such driver and need the order.)
-                if (Mission.Current.GetMissionBehavior<Missions.Hideouts.CoopHideoutMissionLogic>()?.PreserveStealthPosture != true)
+                var hideout = Mission.Current.GetMissionBehavior<Missions.Hideouts.CoopHideoutMissionLogic>();
+                if (hideout?.PreserveStealthPosture != true && hideout?.HoldsSurrenderedDefenders != true)
                     foreach (var formation in formations)
                         formation.SetMovementOrder(MovementOrder.MovementOrderCharge);
 
@@ -827,6 +828,10 @@ public class BattleAuthorityMigrator : IBattleAuthorityMigrator
     // coop battle the host fights as a hero, not a general, so nothing would otherwise order it to engage.
     private void ConvertPuppetToHostAi(Agent agent, bool wakeAi)
     {
+        if (agent.Team?.Side == BattleSideEnum.Defender &&
+            Mission.Current.GetMissionBehavior<Missions.Hideouts.CoopHideoutMissionLogic>()?.HoldsSurrenderedDefenders == true)
+            return;
+
         agent.Controller = AgentControllerType.AI;
 
         // A fleeing puppet already left its formation when the authoritative transition was mirrored. Keep it
