@@ -75,6 +75,12 @@ namespace GameInterface.Services.Kingdoms.Patches
                 return false;
             }
 
+            // Every proposal builds kingdom elections, here or for the other kingdom, and vanilla reads each voter's leader
+            if (Kingdom.All.Any(HasLeaderlessVoter))
+            {
+                return false;
+            }
+
             KingdomDecision kingdomDecision = null;
             float randomFloat = MBRandom.RandomFloat;
             int activeClanCount = ((Kingdom)clan.MapFaction).Clans.Count(x => x.Influence > 100f);
@@ -132,6 +138,10 @@ namespace GameInterface.Services.Kingdoms.Patches
             clan.Kingdom.AddDecision(kingdomDecision);
             return false;
         }
+
+        // Supporter.IsPlayer is Clan.Leader.IsHumanPlayerCharacter for every non-mercenary clan of the kingdom
+        internal static bool HasLeaderlessVoter(Kingdom kingdom) =>
+            kingdom?.Clans?.Any(clan => !clan.IsUnderMercenaryService && clan.Leader == null) == true;
 
         /// <summary>
         /// Server authoritative replacement for the vanilla hourly sweep. Drains every kingdom's
