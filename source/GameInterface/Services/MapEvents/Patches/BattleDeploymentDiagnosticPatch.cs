@@ -26,7 +26,7 @@ internal class BattleDeploymentDiagnosticPatch
     private const int StackFrames = 8;
 
     // Weak keys so a finished mission or supplier never stays alive through the dedupe cache
-    private static readonly ConditionalWeakTable<DefaultBattleMissionAgentSpawnLogic, StrongBox<string>> LastStates = new();
+    private static readonly ConditionalWeakTable<DefaultBattleMissionAgentSpawnLogic, HashSet<string>> LoggedStates = new();
     private static readonly ConditionalWeakTable<CoopTroopSupplier, HashSet<string>> LoggedReads = new();
 
     [HarmonyPatch(typeof(DefaultBattleMissionAgentSpawnLogic), "CheckDeployment")]
@@ -38,6 +38,16 @@ internal class BattleDeploymentDiagnosticPatch
     [HarmonyPostfix]
     private static void CheckDeploymentPostfix(DefaultBattleMissionAgentSpawnLogic __instance)
         => LogIfChanged(__instance, "CheckDeployment after");
+
+    // A throw inside CheckDeployment skips its postfix and the spawn loop, so name it here without swallowing it
+    [HarmonyPatch(typeof(DefaultBattleMissionAgentSpawnLogic), "CheckDeployment")]
+    [HarmonyFinalizer]
+    private static void CheckDeploymentFinalizer(DefaultBattleMissionAgentSpawnLogic __instance, Exception __exception)
+    {
+        if (__exception == null || !IsEnabled()) return;
+
+        Logger.Error(__exception, "[BattleDiag] CheckDeployment THREW: {State}", DescribeDeploymentState(__instance));
+    }
 
     [HarmonyPatch(typeof(DefaultBattleMissionAgentSpawnLogic), nameof(DefaultBattleMissionAgentSpawnLogic.SetSpawnTroops))]
     [HarmonyPrefix]
@@ -70,10 +80,9 @@ internal class BattleDeploymentDiagnosticPatch
         if (!IsEnabled() || logic == null) return;
 
         string state = DescribeDeploymentState(logic);
-        var last = LastStates.GetOrCreateValue(logic);
-        if (last.Value == state) return;
+        // Keyed on the call too, so a SetSpawnTroops call that leaves the state unchanged still shows once
+        if (!LoggedStates.GetOrCreateValue(logic).Add(context + ": " + state)) return;
 
-        last.Value = state;
         Logger.Information("[BattleDiag] {Context}: {State}", context, state);
     }
 
