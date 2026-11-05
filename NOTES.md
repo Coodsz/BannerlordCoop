@@ -29,3 +29,6 @@ The rebased branches were cut before the `PR_BODY.md` commits, so those files ar
 
 ## Upstream PR 4326 merged into development, full E2E
 Pending, see below once the run finishes.
+
+## Upstream draft PR bodies (item 7)
+Not done. This session can read upstream's git history (anonymous reads through the proxy) but not its pull requests: the GitHub API here covers only the Coodsz fork, and attaching the upstream repo with credentials would go beyond read only, which nobody asked for. So the PR bodies of 4193, 4295, 4308 to 4317, 4319, 4320 and 4325 to 4328 weren't checked for a missing "How was this tested?" section or Closes/Related links. A session with read access to upstream PRs, or `gh pr view N --repo Bannerlord-Coop-Team/BannerlordCoop --json body` on Coodsz's machine, can do it.
