@@ -28,7 +28,20 @@ All rebased onto upstream development e2057ad80 with no conflicts, pushed as `<n
 The rebased branches were cut before the `PR_BODY.md` commits, so those files are only on the original branches.
 
 ## Upstream PR 4326 merged into development, full E2E
-Pending, see below once the run finishes.
+4326's head c2ef3c800 merged into development e2057ad80 (local merge commit 2f1270f5a, not pushed upstream), built in Release, then all 8 CI shards run one after another with `.github/scripts/run-e2e-shard.sh <i> 8`, the same script CI uses. The script only prints "completed" when `dotnet test` passes.
+
+| Shard | Test cases | Result | Time |
+| --- | --- | --- | --- |
+| 0 | 385 | pass | 615 s |
+| 1 | 424 | pass | 540 s |
+| 2 | 449 | pass | 569 s |
+| 3 | 374 | pass | 498 s |
+| 4 | 630 | pass | 577 s |
+| 5 | 389 | pass | 551 s |
+| 6 | 398 | pass | 556 s |
+| 7 | 391 | pass | 637 s |
+
+All 3440 cases passed, no failures.
 
 ## Upstream draft PR bodies (item 7)
 Not done. This session can read upstream's git history (anonymous reads through the proxy) but not its pull requests: the GitHub API here covers only the Coodsz fork, and attaching the upstream repo with credentials would go beyond read only, which nobody asked for. So the PR bodies of 4193, 4295, 4308 to 4317, 4319, 4320 and 4325 to 4328 weren't checked for a missing "How was this tested?" section or Closes/Related links. A session with read access to upstream PRs, or `gh pr view N --repo Bannerlord-Coop-Team/BannerlordCoop --json body` on Coodsz's machine, can do it.
