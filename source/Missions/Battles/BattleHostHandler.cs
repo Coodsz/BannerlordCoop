@@ -358,7 +358,8 @@ internal class BattleHostHandler : IHandler
             if (!objectManager.TryGetObjectWithLogging<MapEvent>(mapEventId, out var mapEvent))
                 return;
 
-            if (string.IsNullOrEmpty(requesterId) || !IsRequesterInBattle(mapEvent, requesterId))
+            if (string.IsNullOrEmpty(requesterId) || !IsSenderController(requester, requesterId) ||
+                !IsRequesterInBattle(mapEvent, requesterId))
             {
                 Logger.Warning("[BattleHost] Ignoring host request for {MapEventId} from '{Requester}' (not a participant)",
                     mapEventId, requesterId);
@@ -416,6 +417,10 @@ internal class BattleHostHandler : IHandler
         });
     }
 
+    // A peer already linked to another controller (it switched seats) sends a stale controller id.
+    private bool IsSenderController(NetPeer requester, string controllerId) =>
+        requester == null || !playerManager.TryGetPlayer(requester, out var player) || player.ControllerId == controllerId;
+
     /// <summary>[Server] A client asks for the reserves it currently owns: at battle ENTRY (feed its own
     /// parties while it loads), or after taking over a departed owner's troops (a host adopting a leaver, or
     /// a promoted successor) — the reply carries the full owned set at the current ledger pointers so adopted
@@ -434,7 +439,8 @@ internal class BattleHostHandler : IHandler
             if (!objectManager.TryGetObjectWithLogging<MapEvent>(mapEventId, out var mapEvent))
                 return;
 
-            if (string.IsNullOrEmpty(requesterId) || !IsRequesterInBattle(mapEvent, requesterId))
+            if (string.IsNullOrEmpty(requesterId) || !IsSenderController(requester, requesterId) ||
+                !IsRequesterInBattle(mapEvent, requesterId))
             {
                 Logger.Warning("[BattleHost] Ignoring reserve request for {MapEventId} from '{Requester}' (not a participant)",
                     mapEventId, requesterId);
