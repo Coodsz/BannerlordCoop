@@ -62,6 +62,7 @@ Branch `pr/controller-id-sender-checks-on-4326`: 4326's head merged with develop
 The only conflict was in `Missions/Battles/BattleHostHandler.cs`, where 4326 adds `ProcessHostRequest`, `TryHoldElection` and the preferred-host helpers at the spot the controller-id commit adds its `IsSenderController` helper. Resolved by keeping all of 4326's methods and adding `IsSenderController` after `SuccessorRank`. The participant check edits applied without conflict: in `Handle_NetworkRequestBattleHost` the `IsSenderController(requester, requesterId)` check sits in the participant check before `MarkPresent` and `TryHoldElection`, so a request is checked once when it arrives, before it can be held, and a held election only replays requests that already passed. `Handle_NetworkRequestBattleReserves` has the same check.
 
 E2E on that branch: ControllerIdTests, Services.Locations, HostElection, PreferredHost, BattleHost and MissionReadyElection tests, 115/115.
+`VillageHostileActionTests` on that branch (the village raid half of the controller-id change): 83/83.
 
 ## Tech debt review of the pr/ branches (item 4)
 Run with `.agents/skills/tech-debt-review` (scan.sh plus the fit, defensive, flow and tests lenses, each finding re-checked against the branch head). Four read-only review passes ran in parallel over the eleven branches. Nothing was fixed. No decompiler here, so nothing below depends on vanilla code that isn't in the repo. Below are the real findings; "looks fine" items are left out.
@@ -132,3 +133,14 @@ The non-peer bypass appears on most branches (the reviewers found it on kingdom,
 ## 4309 and 4310 red/green check (items 6 and 7)
 - **4309**: already has red/green tests. Its `DefaultNotificationsHandlerNullListTests` on development without the fix: 3 of 6 fail (`GivenBirth_StillbornOnly_ArrivesWithANullListAndStillNotifies`, `PartyJoinedArmy_PartyWithoutArmy_DoesNotThrow`, `PartyAttachedAnotherParty_PartyWithoutArmy_DoesNotThrow`), so the null list and null army fixes are covered red/green. The other three are regression checks; `GivenBirth_UnresolvableChild_SkipsInsteadOfShowingTheWrongCount` passes on development too, so the "skip a birth with a missing child" part has no red/green test. No `test/4309-repro` branch was needed.
 - **4310**: already has a red/green test. `EncounterContinueSiegeConditionTests.ContinueSiegeCondition_MainPartyOutsideTheBattle_HidesTheOptionWithoutThrowing` fails on development without the fix with the `IndexOutOfRangeException` the patch describes. The file as a whole doesn't compile on development, because its second test calls the new patch's `Prefix` by name; running only the first test shows it red.
+
+## Stale-base PRs merged with current development (item 5)
+Each PR head merged locally into development e2057ad80 (nothing pushed), then the tests for the files it touches were run.
+
+| PR | Behind development | Merge | Tests | Result |
+| --- | --- | --- | --- | --- |
+| 4193 (shadowed 0Harmony.dll detection; `ShadowedAssemblyDetector`, `CoopMod.cs`) | 609 | clean | all of Coop.Tests, then `ShadowedAssemblyDetector` tests | 1462/1462, 8/8 |
+| 4295 (hero stub off the campaign lists; `HeroFieldsHandler`, `HeroRegistry`) | 367 | clean | E2E Services.Heroes | 107/107 |
+| 4315 (siege assault options with no siege) | 367 | clean | E2E Services.SiegeEvents | running when this was written |
+
+`CoopMod.cs` is in the game-facing `Coop` project, which isn't built on this Linux machine, so 4193's `CoopMod.cs` change is only covered by the merge being clean, not by a build.
