@@ -28,4 +28,4 @@ Harness: `SiegeLeaveMenuTests`, `SiegeAssaultLeaveTests`, `SiegeDisconnectTests`
 ## Not sure / left out
 - `ServerSiegeEngineHandler` deploy/remove: the battle host also deploys engines for NPC sides, so "sender's party" would be wrong and the right rule isn't clear.
 - `BattleFinalizeHandler` / `BattleState` when no host is elected: who may finalize then isn't clear, so only the elected-host case is checked.
-- Influence: bounded (own clan, non-negative) rather than recomputed from the vanilla cost, because the client-side cost depends on UI state the server doesn't have.
+- Influence: bounded (own clan, non-negative) rather than recomputed. The amount comes from the client's army screen total (`ArmyVMPatches.cs:78`) or the abandon-army cost (`PlayerArmyWaitBehaviorPatches.cs:205`); recomputing the army screen total on the server wasn't attempted.
