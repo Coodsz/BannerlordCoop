@@ -25,5 +25,6 @@ Test harness: `Coop.Tests/TestComponentBase.cs` registers a mock `ICoopClanPermi
 
 ## Not sure / left out
 - `HeroHitPointsHandler` left out: the mission host sets other heroes' HP through it, so a "sender controls the hero" rule would break battles. The right rule isn't clear.
-- Not E2E covered (unit build only): perks/attributes beyond focus, hero rename, wage limit, auto recruit.
+- Added later (brief 57): `PartyHeroRequestSenderTests.WageLimit_IsSetOnlyByTheClanLeader` and `TownAutoRecruit_IsSetOnlyByTheOwnerClansLeader` (owner and outsider), `HeroRenameOfAnotherPlayersHero_IsRefused` and `AttributePointsOnAnotherPlayersHero_AreRefused`. With the handlers at base every outsider case fails; with the fix all 13 tests in the class pass.
+- Perks have no separate test: they go through the same `NetworkApplyChanges` request and the same `CanSenderDevelop` check as the attribute test.
 - Rest of audit row 5 (smelting/refinement, `ClanKingdomHandler` OnClanSupported, bandit and patrol interactions) is on its own branch, `fix/row5-crafting-bandit-sender-checks`.
