@@ -55,3 +55,10 @@ The `RegisterMock<ICoopClanPermissions>` line in `Coop.Tests/TestComponentBase.c
 
 ## Disband test workaround once the disband fix is in
 Yes, the `Campaign.Current.PlayerDefaultFaction = memberHero.Clan;` line (and its comment) in `ArmyRequestSenderTests.Disband_IsAppliedOnlyAsTheSendersOwnParty` on the battle branch can go once `fix/disband-army-cost-clan` is in. Checked locally (nothing pushed): `pr/battle-request-sender-checks` merged with `pr/disband-army-cost-clan` merges cleanly, and the merged `DisbandArmyHandler` keeps both the battle branch's sender check and the disband branch's `MainHeroSubstitutionScope`. With the two lines removed, `Services.Armies` passes 37/37, including the disband sender test. The test still sets a clan on the member hero, which the scope needs to set `PlayerDefaultFaction`. Whichever of the two lands second should drop the line; the branches themselves weren't changed.
+
+## Controller-id change on top of 4326
+Branch `pr/controller-id-sender-checks-on-4326`: 4326's head merged with development (local merge 2f1270f5a), then the `pr/controller-id-sender-checks` commit cherry-picked on top (a219216bf).
+
+The only conflict was in `Missions/Battles/BattleHostHandler.cs`, where 4326 adds `ProcessHostRequest`, `TryHoldElection` and the preferred-host helpers at the spot the controller-id commit adds its `IsSenderController` helper. Resolved by keeping all of 4326's methods and adding `IsSenderController` after `SuccessorRank`. The participant check edits applied without conflict: in `Handle_NetworkRequestBattleHost` the `IsSenderController(requester, requesterId)` check sits in the participant check before `MarkPresent` and `TryHoldElection`, so a request is checked once when it arrives, before it can be held, and a held election only replays requests that already passed. `Handle_NetworkRequestBattleReserves` has the same check.
+
+E2E on that branch: ControllerIdTests, Services.Locations, HostElection, PreferredHost, BattleHost and MissionReadyElection tests, 115/115.
