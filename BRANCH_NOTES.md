@@ -17,4 +17,5 @@ A player's disband request never disbands the army on the dedicated server.
 ## Tests
 - New E2E `Services/Armies/ArmyDisbandCostTests.DisbandRequest_DisbandsTheArmyAndChargesTheDisbandingClan`: the server has no player clan, the member's client sends the disband, the army is gone and the member's clan lost influence, and `Clan.PlayerClan` is null again afterwards. Fails on base (army not disbanded, log shows the NRE in `GetInfluenceCostOfDisbandingArmy`), passes with the fix.
 - E2E Services.Armies: 30/30 with the fix.
+- Unit: GameInterface.Tests 2270, Coop.Tests 1454, all passed.
 - `fix/battle-request-sender-checks` works around this in its disband sender test by setting `PlayerDefaultFaction` in the test; once this fix is in, that line can go.
