@@ -108,8 +108,26 @@ Run with `.agents/skills/tech-debt-review` (scan.sh plus the fit, defensive, flo
 - Follow-up: `IsSenderController` is copied in both host handlers, and the village handler has a stricter version under a different lookup; put both rules on `IPlayerManager` with names that say which rule they apply. The lenient "unlinked peer passes" branch only serves tests (every real peer is linked during the join); say so in the comment, or link all peers in the mission harness and go strict.
 - Follow-up: `BattleHostControllerIdTests` reserve test only checks refusal.
 
-### pr/party-hero-request-sender-checks, pr/row5-crafting-bandit-sender-checks, pr/map-tracks-sender-check
-Review still running when this section was written; see the next section if it landed.
+### pr/party-hero-request-sender-checks
+- Fix before merge: `Coop.Tests/TestComponentBase.cs:16` adds `using GameInterface.Services.Clans;`, which base already has at line 1 (CS0105 duplicate using warning). Delete the added line; the row5 branch adds the same mock without it.
+- Fix before merge: the helpers return true for a non-`NetPeer` sender (`ServerHeroHandler.cs:64`, `BarberHandler.cs:147`, `CharacterDeveloperHandler.cs:201`, `ClanNameHandler.cs:110`, `ClanPartyItemVMHandler.cs:106,116`, `PartyRolesHandler.cs:343`, `PartyWageLimitHandler.cs:72`), but these messages only ever reach the server from a client. The existing `ChangeGovernorHandler.CanSenderManageClan` does without that clause because `TryGetSenderHero` already fails for a non-peer. Drop it.
+- Fix before merge: seven handlers share one log line, "Ignoring a request for {Target} from a peer that may not change it", with no request name or peer id, so different refusals look identical in `Coop_server.log`.
+- Follow-up: the same refusal helper is now copied about 7 times on this branch (plus 2 on upstream); one injected helper or an `IPlayerManager` method would replace them.
+- Open question: `PartyRolesPatches` forwards every client call to remove party roles, not only UI clicks. Can a vanilla side effect on a client remove a role on a party that player neither leads nor manages? Those are now dropped with a warning.
+- Answered here: the reviewer asked whether the barber, rename and attribute refusal tests fail without the check. They do; each failed on base in this branch's base check.
+
+### pr/row5-crafting-bandit-sender-checks
+- Fix before merge: `ClanKingdomHandler.cs:146` returns true for a non-peer sender while the existing code three lines later (`:149`) logs an error and returns for the same case. Move the check below the existing peer guard and drop the clause.
+- Fix before merge: the same dead non-peer bypass in `BanditInteractionsHandler.cs:345,350,359`, `PatrolInteractionsHandler.cs:148`, `CraftingCampaignBehaviorCraftingHandler.cs:188`, where the code later sends to `obj.Who as NetPeer`.
+- Follow-up: 5 more copies of the refusal helper.
+- Open question: a refused bandit surrender never gets `NetworkFinalizeBanditSurrenderClient`, and refused smithy requests skip their `NetworkRefresh*` reply. In the honest race, is the client left waiting in the encounter or screen?
+- Answered here: the bandit surrender, prisoner release and clan support refusal tests all failed on base in this branch's base check.
+
+### pr/map-tracks-sender-check
+- Fix before merge: `MapTracksHandler.cs:136` skips the check for a non-peer sender, but the message only comes from a client and `:146` already sends to `obj.Who as NetPeer`. Use `if (!playerManager.IsSenderControllingParty(obj.Who, obj.What.PlayerPartyId)) return;`.
+
+### Across the branches
+The non-peer bypass appears on most branches (the reviewers found it on kingdom, party-hero, row5 and map-tracks; the "server-local publishes aren't checked" line in the PR bodies comes from it). Where a server or debug command really publishes the message (alley debug commands, `ClanLeaveRules`), the bypass is needed; elsewhere it's dead. Worth one pass across all branches before they go up, together with a shared sender-check helper on `IPlayerManager`.
 
 ## 4309 and 4310 red/green check (items 6 and 7)
 - **4309**: already has red/green tests. Its `DefaultNotificationsHandlerNullListTests` on development without the fix: 3 of 6 fail (`GivenBirth_StillbornOnly_ArrivesWithANullListAndStillNotifies`, `PartyJoinedArmy_PartyWithoutArmy_DoesNotThrow`, `PartyAttachedAnotherParty_PartyWithoutArmy_DoesNotThrow`), so the null list and null army fixes are covered red/green. The other three are regression checks; `GivenBirth_UnresolvableChild_SkipsInsteadOfShowingTheWrongCount` passes on development too, so the "skip a birth with a missing child" part has no red/green test. No `test/4309-repro` branch was needed.
