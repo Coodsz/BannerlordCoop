@@ -22,6 +22,6 @@ On the server, these requests from a `NetPeer` are refused with a warning unless
 - Unit: Coop.Tests 1454, GameInterface.Tests 2270, all passed.
 
 ## Not sure / left out
-- Patrol hostile action has no E2E test: `BeHostileAction.ApplyEncounterHostileAction` has no observable effect in the test campaign that I could find (no decompiler on this machine to check what it changes), so only the build covers it.
+- Added later (brief 57): `SmithyClanSupportRequestSenderTests.PatrolHostileAction_IsAppliedOnlyForTheSendersParty` (owner and outsider). The visible effect: with the two parties' kingdoms at peace, the hostile action declares war between them. With `PatrolInteractionsHandler` at base the outsider's request declares war; with the fix only the owner's does. `SmithyClanSupportRequestSenderTests` plus `BanditRequestSenderTests`: 11/11.
 - `NetworkBanditPartyScreenDoneCondition` (sets fugitive heroes active) left out: it carries only character ids, no party, so it's unclear whose screen it should be tied to.
 - The smithy tests use zero stamina, so the owner case only proves the request reached the stamina reply; the actual smelt/refine with materials isn't exercised.
