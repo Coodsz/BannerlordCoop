@@ -62,3 +62,55 @@ Branch `pr/controller-id-sender-checks-on-4326`: 4326's head merged with develop
 The only conflict was in `Missions/Battles/BattleHostHandler.cs`, where 4326 adds `ProcessHostRequest`, `TryHoldElection` and the preferred-host helpers at the spot the controller-id commit adds its `IsSenderController` helper. Resolved by keeping all of 4326's methods and adding `IsSenderController` after `SuccessorRank`. The participant check edits applied without conflict: in `Handle_NetworkRequestBattleHost` the `IsSenderController(requester, requesterId)` check sits in the participant check before `MarkPresent` and `TryHoldElection`, so a request is checked once when it arrives, before it can be held, and a held election only replays requests that already passed. `Handle_NetworkRequestBattleReserves` has the same check.
 
 E2E on that branch: ControllerIdTests, Services.Locations, HostElection, PreferredHost, BattleHost and MissionReadyElection tests, 115/115.
+
+## Tech debt review of the pr/ branches (item 4)
+Run with `.agents/skills/tech-debt-review` (scan.sh plus the fit, defensive, flow and tests lenses, each finding re-checked against the branch head). Four read-only review passes ran in parallel over the eleven branches. Nothing was fixed. No decompiler here, so nothing below depends on vanilla code that isn't in the repo. Below are the real findings; "looks fine" items are left out.
+
+### pr/battle-request-sender-checks
+- **Regression, fix before merge (verified).** `ArmyHandler.IsSenderSpendingOwnInfluence` (`ArmyHandler.cs:282`, `:299-305`) only accepts an influence change for the sender's own clan. Both mercenary dismissal paths in `MercenaryServiceConversationPatch.cs` (`:105` without paying, `:114` with paying) publish `ChangeClanInfluence` for `Hero.OneToOneConversationHero.Clan`, the mercenary's clan, to clear its influence. That is now refused, so firing a mercenary no longer clears the mercenary clan's influence on the server. Not a one-line fix: on the "without paying" path the dismissal message reaches the server before the influence message, so by then the clan is no longer a mercenary in the sender's kingdom. Likely fix: have the server's dismissal apply (`MercenaryServiceHandler`) clear the mercenary clan's influence itself and stop relying on the client's `ChangeClanInfluence` for another clan.
+- Fix before merge: `SiegeAssaultLeaveTests.SetMainParty` (`:909-926`) and `SiegeLeaveMenuTests.SetMainParty` (`:798-816`) register a `leaver-<partyId>` player and call `SetPeer`, which silently re-links a client that a test already connected as `PlayerOne` to a hero-less player. Skip the registration when a player already owns the party.
+- Follow-up: `IsAllowedArmyMemberChange` (`ArmyHandler.cs:287-296`) and `IsPeerInMapEvent` (`MapEventHandler.cs:275-280`) use `TryGetPlayer(peer)` instead of `IsSenderControllingParty`'s current-controller rule, and `ArmyHandler.cs:290` refuses without a log line.
+- Follow-up: drop the `PlayerDefaultFaction` workaround in the disband test once `pr/disband-army-cost-clan` is in (checked above).
+- Open questions: the negative-amount guards on cohesion and influence only matter for a tampered client, and the influence one would also refuse a clan with negative influence. Break-siege and leave refusals send no reply, although a `Rejected` outcome exists.
+
+### pr/disband-army-cost-clan
+- Nothing material. Follow-up only: once both disband changes are in, `ArmyDisbandCostTests` and the battle branch's disband sender test overlap.
+
+### pr/economy-request-sender-checks
+- Fix before merge: identical `IsSenderOwner(object, Workshop)` helpers in `ChangeProductionTypeOfWorkshopHandler.cs:73` and `WorkshopDataHandler.cs:247`, plus the same shape in `SellPrisonersHandler.cs:85` (and in the hero and alley branches). Add `IsSenderControllingHero(object, Hero)` and `IsSenderControllingParty(object, PartyBase)` overloads to `IPlayerManager` and use them everywhere.
+- Follow-up: four more copies of the "create party, AddPlayer, SetPeer" E2E helper; one shared helper on `E2ETestEnvironment` would do.
+- Open question: `ChangeProductionTypeOfWorkshopHandler.cs:60-66` forces `ignoreCost = false` for peer requests, so the message's `IgnoreCost` field is now never read. Confirm every vanilla client path really pays (needs a decompile), then drop the field.
+
+### pr/hero-request-sender-checks
+- Fix before merge: `TeleportHeroHandler.CanSenderTeleport` (`:89-97`) copies the client gate in `TeleportHeroActionPatches.cs:26-27`. Move it into `ICoopClanPermissions` so the two can't drift.
+- Fix before merge: the take hero, companion rejoin, take lord prisoner, lord helped and teleport tests in `HeroRequestSenderTests.cs` (`:58,66,90,98,106`) only test refusal. Make them owner/outsider pairs like the execution and rescue tests, so they can fail.
+- Fix before merge: `LordConversationsCampaignBehaviorHandler.cs:125` duplicates the economy branch's `IsSenderControllingParty(object, PartyBase)`.
+- Open question: rescue allows any clan member (`CompanionRolesHandler.cs:681`), firing needs `CanManageHero` (`:239`). Intended?
+
+### pr/alley-request-sender-checks (only its own last commit; the rest is #4320)
+- Fix before merge: `AlleyClearTests.CreateClearScenario` (`:249-256`) reconnects players that `AlleyTestEnvironment` now already connects; delete it.
+- Fix before merge: `AlleyManagementHandler.cs:348-349`, `:394-395` resolve the alley twice (two "Failed to get Alley" lines on a miss). Resolve once and pass the alley in.
+- Follow-up: with no owner (double-clicked abandon, defense resolve after a timeout) `IsSenderControllingHero(sender, null)` logs a warning blaming the sender. Return quietly when the owner is null.
+
+### pr/clan-service-sender-checks
+- Fix before merge: the rebellion and mercenary join/dismissal tests (`PlayerKingdomCreationFlowTests.cs:649,661,681`) only test refusal; make them leader/member pairs.
+- Follow-up: two more hand-rolled "sender leads the clan" helpers (`VassalServiceHandler.cs:231-237`, `MercenaryServiceHandler.cs:151-157`) next to existing copies in `ChangeGovernorHandler` and `PlayerBannerHandler`, and the leave log wording is reused for a refused rebellion.
+- Follow-up: `MercenaryServiceHandler.cs:104`, `:146` now have an always-true `clan == hero.Clan` condition.
+
+### pr/kingdom-request-sender-checks
+- Fix before merge: `ServerKingdomHandler.IsSenderInKingdom` (`:290`, `:313-321`) resolves the kingdom and reads clan state on the poll thread, against AGENTS.md's game-thread rule. Wrap the check and the apply in one `GameThread.RunSafe`.
+- Fix before merge: the non-peer pass-through (`ServerKingdomHandler.cs:98-111`, `:290`, `AllianceHandler.cs:182`, `TradeAgreementsHandler.cs:131`) and its "server-published requests keep theirs" comment only serve tests that publish with `this`; no production code publishes these on the server. Send from a linked peer in those tests and drop the bypass, or at least fix the comment.
+- Fix before merge: `IsSenderRuling` is copied in `AllianceHandler.cs:189-194` and `TradeAgreementsHandler.cs:140-145`.
+- Follow-up: the `ControllerId` fields on `NetworkRequestCreateKingdom` and `NetworkRequestKingdomDecisionVote` are now ignored for every real sender.
+
+### pr/controller-id-sender-checks
+- Fix before merge: the new controller check shares the old "(not a participant)" / "(party not in the settlement)" log line (`BattleHostHandler.cs:361-366`, `:442-447`, `LocationHostHandler.cs:123-127`), so a stale-controller refusal is logged as the wrong cause. Give it its own line.
+- Follow-up: `IsSenderController` is copied in both host handlers, and the village handler has a stricter version under a different lookup; put both rules on `IPlayerManager` with names that say which rule they apply. The lenient "unlinked peer passes" branch only serves tests (every real peer is linked during the join); say so in the comment, or link all peers in the mission harness and go strict.
+- Follow-up: `BattleHostControllerIdTests` reserve test only checks refusal.
+
+### pr/party-hero-request-sender-checks, pr/row5-crafting-bandit-sender-checks, pr/map-tracks-sender-check
+Review still running when this section was written; see the next section if it landed.
+
+## 4309 and 4310 red/green check (items 6 and 7)
+- **4309**: already has red/green tests. Its `DefaultNotificationsHandlerNullListTests` on development without the fix: 3 of 6 fail (`GivenBirth_StillbornOnly_ArrivesWithANullListAndStillNotifies`, `PartyJoinedArmy_PartyWithoutArmy_DoesNotThrow`, `PartyAttachedAnotherParty_PartyWithoutArmy_DoesNotThrow`), so the null list and null army fixes are covered red/green. The other three are regression checks; `GivenBirth_UnresolvableChild_SkipsInsteadOfShowingTheWrongCount` passes on development too, so the "skip a birth with a missing child" part has no red/green test. No `test/4309-repro` branch was needed.
+- **4310**: already has a red/green test. `EncounterContinueSiegeConditionTests.ContinueSiegeCondition_MainPartyOutsideTheBattle_HidesTheOptionWithoutThrowing` fails on development without the fix with the `IndexOutOfRangeException` the patch describes. The file as a whole doesn't compile on development, because its second test calls the new patch's `Prefix` by name; running only the first test shows it red.
