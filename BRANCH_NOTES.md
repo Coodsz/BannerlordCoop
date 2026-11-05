@@ -29,3 +29,8 @@ Harness: `SiegeLeaveMenuTests`, `SiegeAssaultLeaveTests`, `SiegeDisconnectTests`
 - `ServerSiegeEngineHandler` deploy/remove: the battle host also deploys engines for NPC sides, so "sender's party" would be wrong and the right rule isn't clear.
 - `BattleFinalizeHandler` / `BattleState` when no host is elected: who may finalize then isn't clear, so only the elected-host case is checked.
 - Influence: bounded (own clan, non-negative) rather than recomputed. The amount comes from the client's army screen total (`ArmyVMPatches.cs:78`) or the abandon-army cost (`PlayerArmyWaitBehaviorPatches.cs:205`); recomputing the army screen total on the server wasn't attempted.
+
+## Added later (brief 57, "add missing tests to rows 1-4")
+- New E2E `Services/Armies/ArmyRequestSenderTests.PartyIsRemovedFromTheArmyOnlyOnItsOwnPlayersRequest` (member's player and an outsider). With `ArmyHandler` and `DisbandArmyHandler` at base the outsider case fails; with the fix both pass.
+- Cohesion boost and disband tests were written and then dropped: they passed on base too, because the test campaign doesn't apply a boost or a disband even from the right player, so they proved nothing.
+- Still not E2E covered: assault, siege aftermath, army add, cohesion, disband, simulation advance.
