@@ -1,0 +1,6 @@
+# Branch notes: fix/clan-service-sender-checks (draft Coodsz/BannerlordCoop#46)
+
+## Regression fixed after review (brief 60)
+The leader-only rule on `RequestMercenaryDismissalService` also refused a ruler firing an AI mercenary clan: `MercenaryServiceConversationPatch` (`conversation_player_want_to_fire_mercenary_*`) sends the dismissal for the mercenary's clan, which the ruler doesn't lead. `ApplyMercenaryDismissalService` now also accepts the ruler of the kingdom the clan serves as a mercenary. New E2E `PlayerKingdomCreationFlowTests.MercenaryDismissalRequest_ForAnotherClan_IsAppliedOnlyForTheRuler` (ruler and a clan member): the ruler case failed before this fix and passes after; `PlayerKingdomCreationFlowTests` plus Services.Clans 129/129. The `-rebased` and `pr/` copies of this branch don't have this commit yet.
+
+Still open on that path: `ApplyMercenaryDismissalService` clears influence with `-hero.Clan.Influence` (the sender's clan), which for a firing ruler is the ruler's clan, not the mercenary's. That line predates this branch; it probably should be `-clan.Influence`, but vanilla's dismissal influence rule wasn't checked (no decompiler here). The battle branch's influence check also refuses the client's `ChangeClanInfluence` for the mercenary's clan; see its `BRANCH_NOTES.md`.
