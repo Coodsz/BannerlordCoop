@@ -32,3 +32,10 @@ Pending, see below once the run finishes.
 
 ## Upstream draft PR bodies (item 7)
 Not done. This session can read upstream's git history (anonymous reads through the proxy) but not its pull requests: the GitHub API here covers only the Coodsz fork, and attaching the upstream repo with credentials would go beyond read only, which nobody asked for. So the PR bodies of 4193, 4295, 4308 to 4317, 4319, 4320 and 4325 to 4328 weren't checked for a missing "How was this tested?" section or Closes/Related links. A session with read access to upstream PRs, or `gh pr view N --repo Bannerlord-Coop-Team/BannerlordCoop --json body` on Coodsz's machine, can do it.
+
+## PR-ready branches
+Each `fix/<name>-rebased` is copied to `pr/<name>` with `BRANCH_NOTES.md` and `PR_BODY.md` filtered out of every commit (`git filter-branch --index-filter`, notes-only commits pruned), so the diff against development is only code and tests. The code is identical to the `-rebased` branch in every case. The originals and the `-rebased` branches are untouched.
+
+`pr/alley-request-sender-checks` (4 commits, the first three are #4320's), `pr/clan-service-sender-checks` (1), `pr/kingdom-request-sender-checks` (1), `pr/hero-request-sender-checks` (4), `pr/economy-request-sender-checks` (4), `pr/battle-request-sender-checks` (7), `pr/party-hero-request-sender-checks` (3), `pr/row5-crafting-bandit-sender-checks` (2), `pr/controller-id-sender-checks` (1), `pr/map-tracks-sender-check` (1), `pr/disband-army-cost-clan` (1).
+
+The `RegisterMock<ICoopClanPermissions>` line in `Coop.Tests/TestComponentBase.cs` stays in both `pr/party-hero-request-sender-checks` and `pr/row5-crafting-bandit-sender-checks`. Each branch's handlers now take `ICoopClanPermissions`, so without the line that branch's `Coop.Tests` fail to build their container on their own. Both add the identical line at the same spot, and merging the two gives one line (checked with `git merge-tree`: one `RegisterMock<ICoopClanPermissions>` in the result), so nothing needs removing whichever lands second.
