@@ -141,6 +141,11 @@ Each PR head merged locally into development e2057ad80 (nothing pushed), then th
 | --- | --- | --- | --- | --- |
 | 4193 (shadowed 0Harmony.dll detection; `ShadowedAssemblyDetector`, `CoopMod.cs`) | 609 | clean | all of Coop.Tests, then `ShadowedAssemblyDetector` tests | 1462/1462, 8/8 |
 | 4295 (hero stub off the campaign lists; `HeroFieldsHandler`, `HeroRegistry`) | 367 | clean | E2E Services.Heroes | 107/107 |
-| 4315 (siege assault options with no siege) | 367 | clean | E2E Services.SiegeEvents | running when this was written |
+| 4315 (siege assault options with no siege) | 367 | clean | E2E Services.SiegeEvents | 108/108 |
 
 `CoopMod.cs` is in the game-facing `Coop` project, which isn't built on this Linux machine, so 4193's `CoopMod.cs` change is only covered by the merge being clean, not by a build.
+
+## Mercenary firing regressions in the safety branches (found by the review, partly fixed)
+Firing an AI mercenary clan from the ruler's conversation (`MercenaryServiceConversationPatch`, the `conversation_player_want_to_fire_mercenary_*` prefixes) sends two requests about the mercenary's clan, which the ruler doesn't lead or belong to.
+- `RequestMercenaryDismissalService`: refused by the clan-service branch's leader-only rule. **Fixed** on `fix/clan-service-sender-checks` (929eabb4a) and `pr/clan-service-sender-checks`: the ruler of the kingdom the clan serves as a mercenary may also end its service. New E2E `MercenaryDismissalRequest_ForAnotherClan_IsAppliedOnlyForTheRuler` failed before the fix (ruler case) and passes after; `PlayerKingdomCreationFlowTests` plus Services.Clans 129/129 on the original branch. `fix/clan-service-sender-checks-rebased` doesn't have it.
+- `ChangeClanInfluence` for the mercenary's clan: refused by the battle branch's own-clan influence rule. **Not fixed**; written up in that branch's `BRANCH_NOTES.md`. The dismissal apply already clears influence, but with `-hero.Clan.Influence` (the sender's clan, so the ruler's), a line that predates these branches; it probably should be `-clan.Influence`, which would also make the client's separate influence message unnecessary. Needs vanilla's dismissal rule confirmed before changing.
