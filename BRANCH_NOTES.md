@@ -23,5 +23,5 @@ On the server, these requests from a `NetPeer` are refused with a warning unless
 
 ## Not sure / left out
 - Added later (brief 57): `SmithyClanSupportRequestSenderTests.PatrolHostileAction_IsAppliedOnlyForTheSendersParty` (owner and outsider). The visible effect: with the two parties' kingdoms at peace, the hostile action declares war between them. With `PatrolInteractionsHandler` at base the outsider's request declares war; with the fix only the owner's does. `SmithyClanSupportRequestSenderTests` plus `BanditRequestSenderTests`: 11/11.
-- `NetworkBanditPartyScreenDoneCondition` (sets fugitive heroes active) left out: it carries only character ids, no party, so it's unclear whose screen it should be tied to.
+- `NetworkBanditPartyScreenDoneCondition` (sets fugitive heroes active) left out, re-checked in brief 58: it carries only character ids, no party, encounter or map event. A check would need a server record of the bandit encounter the sender just won and the heroes that encounter freed; none is kept, so nothing ties the ids to the sender.
 - The smithy tests use zero stamina, so the owner case only proves the request reached the stamina reply; the actual smelt/refine with materials isn't exercised.
