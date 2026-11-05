@@ -34,4 +34,5 @@ Harness: `SiegeLeaveMenuTests`, `SiegeAssaultLeaveTests`, `SiegeDisconnectTests`
 - New E2E `Services/Armies/ArmyRequestSenderTests.PartyIsRemovedFromTheArmyOnlyOnItsOwnPlayersRequest` (member's player and an outsider). With `ArmyHandler` and `DisbandArmyHandler` at base the outsider case fails; with the fix both pass.
 - `ArmyRequestSenderTests.PartyIsAddedToTheArmyOnlyOnItsOwnPlayersRequest` (own party allowed, another party refused) and `CohesionBoostFromAPlayerWhoDoesNotLeadTheArmy_IsRefused`. With the handlers at base the refusal cases fail; with the fix all pass. The cohesion test needed the leader's clan to have influence, otherwise the boost doesn't apply even on base (that's why the first version was dropped).
 - Disband test dropped: it passes on base too, even with a clan on the disbanding party. `DisbandArmyApplyInternal` doesn't disperse the army in the test campaign; the cause wasn't found.
-- Still not E2E covered: assault, siege aftermath, disband, simulation advance.
+- `VillageHostileActionTests.BattleSimulationAdvance_IsAppliedOnlyFromThePeerRunningIt` (pacer and the other raider). The battle is set to decided so an advance finishes the simulation. With `BattleSimulationRunHandler` at base the other raider's advance finishes it; with the fix only the pacer's does.
+- Still not E2E covered: assault, siege aftermath, disband.
