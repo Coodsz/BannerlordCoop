@@ -5,4 +5,4 @@
 - Base check: with the `IsSenderControllingParty` line removed from `PlayerCaptivityServerHandler.Handle_NetworkPlayerSurrendered`, the outsider case fails and the owner case passes; with it both pass.
 
 ## Still not E2E covered
-- `NetworkExecuteHero`: an execution doesn't complete in the test campaign even on base (unchanged from the PR body).
+- `NetworkExecuteHero`: retried in brief 57 with a captive and `isForced: true`. The execution doesn't complete even from the owner (the captive stays alive with the fix and at base), so an outsider test would pass on base too and was dropped. The server log showed no exception from `KillCharacterAction.ApplyInternal`, only unrelated autosync noise, so the cause wasn't found.
